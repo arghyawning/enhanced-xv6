@@ -48,17 +48,6 @@ prompt> ./test-getreadcounts.sh -s
         ```
         extern int sys_getreadcount(void);
         ```
-    - declare and initialise a variable `readcount`
-        ```
-        int readcount = 0;
-        ```
-    - if the sys call `read` is called, update the readcount variable and if the sys call `getreadcount` is called, update the readcount attribute of the process
-        ```
-        if(num==SYS_read)
-            readcount++;
-        if(num==SYS_getreadcount)
-            p->readcount = readcount;
-        ```
 
 - in `kernel/proc.h`
     add a new attribute `readcount` to the `proc` structure
