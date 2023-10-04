@@ -114,3 +114,33 @@ sys_getreadcount(void)
 {
   return myproc()->readcount;
 }
+
+int
+sys_sigalarm(void)
+{
+  int interval;
+  argint(0, &interval);
+
+  uint64 handler;
+  argaddr(1, &handler);
+
+  struct proc *p = myproc();
+  p->numticks = 0;
+  p->interval = interval;
+  p->handler = handler;
+
+  return 0;
+}
+
+int
+sys_sigreturn(void)
+{
+  printf("sigreturn called\n");
+  struct proc *p = myproc();
+  
+  // memmove(p->trapframe, p->trapframecopy, sizeof(struct trapframe));
+  *(p->trapframe) = *(p->trapframecopy);
+  p->alarmflag = 0;
+  
+  return 0;
+}

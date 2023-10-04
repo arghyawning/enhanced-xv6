@@ -153,6 +153,11 @@ found:
   p->rtime = 0;
   p->etime = 0;
   p->ctime = ticks;
+
+  p->numticks = 0;
+  p->alarmflag = 0;
+  p->interval = 0;
+
   return p;
 }
 
@@ -176,6 +181,12 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  p->readcount = 0;
+
+  p->numticks = 0;
+  p->alarmflag = 0;
+  p->interval = 0;
 }
 
 // Create a user page table for a given process, with no user memory,

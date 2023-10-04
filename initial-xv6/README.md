@@ -52,24 +52,7 @@ prompt> ./test-getreadcounts.sh -s
 - in `kernel/proc.h`
     add a new attribute `readcount` to the `proc` structure
     ```
-    struct proc
-    {
-    struct spinlock lock;
-
-    // p->lock must be held when using these:
-    enum procstate state; // Process state
-    void *chan;           // If non-zero, sleeping on chan
-    int killed;           // If non-zero, have been killed
-    int xstate;           // Exit status to be returned to parent's wait
-    int pid;              // Process ID
-    int readcount;
-
-
-    // wait_lock must be held when using this:
-    struct proc *parent; // Parent process
-    .
-    .
-    .
+    int readcount;        // number of times sys call read has been called
     ```
 
 - in `kernel/sysproc.c`
@@ -83,7 +66,7 @@ prompt> ./test-getreadcounts.sh -s
     ```
 
 - in `kernel/proc.c`
-    initialise the `readcount` attribute of the `proc` structure to 0
+    initialise the `readcount` attribute of the `proc` structure to 0 in the `allocproc` and `freeproc` functions
     ```
     p->readcount = 0;
     ```
@@ -124,6 +107,130 @@ prompt> ./test-getreadcounts.sh -s
     ```sh
     prompt> alarmtest
     ```
+
+### Implementing `sigalarm` and `sigreturn`
+
+- in `kernel/syscall.h`
+    add the following entry
+    ```
+    #define SYS_sigalarm 24
+    #define SYS_sigreturn 25
+    ```
+
+- in `kernel/syscall.c`
+    - add the following line
+        ```
+        extern uint64 sys_sigalarm(void);
+        extern uint64 sys_sigreturn(void);
+        ```
+    - add the following line to the `syscall` array
+        ```
+        [SYS_sigalarm] sys_sigalarm,
+        [SYS_sigreturn] sys_sigreturn,
+        ```
+
+- in `user/user.h`
+    add the following function definition
+    ```
+    int sigalarm(int, void* func);
+    int sigreturn(void);
+    ```
+
+- in `user/usys.pl`
+    added the following entry
+    ```
+    entry("sigalarm");
+    entry("sigreturn");
+    ```
+
+- in `kernel/proc.h`
+    add the following required new attributes to the `proc` structure
+    ```
+    int numticks;                    // number of ticks the process has run for
+    int alarmflag;                   // flag to check if alarm is set
+    int interval;                    // number of ticks after which alarm handler is to be called
+    uint64 handler;                  // function pointer for alarm handler
+    struct trapframe *trapframecopy; // copy of trapframe for sigreturn
+    ```
+
+- in `kernel/proc.c`
+    - update the `allocproc` function to initialise the new attributes
+        ```
+        p->numticks = 0;
+        p->alarmflag = 0;
+        p->interval = 0;
+        p->handler = 0;
+        ```
+    - updated the `freeproc` function as well
+
+- in `kernel/sysproc.c`
+    add the `sys_sigalarm` and `sys_sigreturn` functions
+    ```
+    int
+    sys_sigalarm(void)
+    {
+        int interval;
+        argint(0, &interval);
+
+        uint64 handler;
+        argaddr(1, &handler);
+
+        struct proc *p = myproc();
+        p->numticks = 0;
+        p->interval = interval;
+        p->handler = handler;
+
+        return 0;
+    }
+
+    int
+    sys_sigreturn(void)
+    {
+        struct proc *p = myproc();
+        
+        memmove(p->trapframe, p->trapframecopy, sizeof(struct trapframe));
+        p->alarmflag = 0;
+        
+        return 0;
+    }
+    ```
+
+- in `kernel/syscall.c`
+    the return value of `sigreturn` gets stored in `trapframe->a0` and so here, its value is being restored
+    ```
+    if(num==SYS_sigreturn)
+    {
+        // restore a0
+        p->trapframe->a0 = p->trapframecopy->a0;
+        kfree((void*) p->trapframecopy);
+    }
+    ```
+
+- in `kernel/trap.c`
+    added code to update the number of ticks and handle accordingly
+    ```
+    // give up the CPU if this is a timer interrupt.
+    if (which_dev == 2)
+    {
+        if (p->interval > 0)
+        {
+            if(p->alarmflag==0)
+            {
+                p->numticks++;
+                if (p->numticks == p->interval)
+                {
+                    p->numticks = 0;
+                    p->alarmflag = 1;
+                    p->trapframecopy = (struct trapframe *)kalloc();
+                    *(p->trapframecopy) = *(p->trapframe);
+                    p->trapframe->epc = p->handler;
+                }
+            }
+        }
+        yield();
+    }
+    ```
+    note: `which_dev` being 2 indicates timer interrupt
 
 ---
 

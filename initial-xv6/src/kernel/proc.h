@@ -98,12 +98,11 @@ struct proc
   struct spinlock lock;
 
   // p->lock must be held when using these:
-  enum procstate state; // Process state
-  void *chan;           // If non-zero, sleeping on chan
-  int killed;           // If non-zero, have been killed
-  int xstate;           // Exit status to be returned to parent's wait
-  int pid;              // Process ID
-  int readcount;
+  enum procstate state;            // Process state
+  void *chan;                      // If non-zero, sleeping on chan
+  int killed;                      // If non-zero, have been killed
+  int xstate;                      // Exit status to be returned to parent's wait
+  int pid;                         // Process ID
 
   // wait_lock must be held when using this:
   struct proc *parent; // Parent process
@@ -120,6 +119,13 @@ struct proc
   uint rtime;                  // How long the process ran for
   uint ctime;                  // When was the process created
   uint etime;                  // When did the process exited
+  
+  int readcount;                   // number of times sys call read has been called
+  int numticks;                    // number of ticks the process has run for
+  int alarmflag;                   // flag to check if alarm is set
+  int interval;                    // number of ticks after which alarm handler is to be called
+  uint64 handler;                  // function pointer for alarm handler
+  struct trapframe *trapframecopy; // copy of trapframe for sigreturn
 };
 
 extern struct proc proc[NPROC];
