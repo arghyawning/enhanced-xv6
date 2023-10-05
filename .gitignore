@@ -1,4 +1,13 @@
 networks/partA/basic/tcp/client
 networks/partA/basic/tcp/server
+
 networks/partA/basic/udp/client
 networks/partA/basic/udp/server
+
+networks/partA/rpc/tcp/p1
+networks/partA/rpc/tcp/p2
+networks/partA/rpc/tcp/server
+
+networks/partA/rpc/udp/p1
+networks/partA/rpc/udp/p2
+networks/partA/rpc/udp/server
