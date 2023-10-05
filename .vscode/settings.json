@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "user.h": "c",
-        "syscall.h": "c"
+        "syscall.h": "c",
+        "inet.h": "c"
     }
 }
