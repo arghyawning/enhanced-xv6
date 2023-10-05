@@ -1,0 +1,4 @@
+networks/partA/basic/tcp/client
+networks/partA/basic/tcp/server
+networks/partA/basic/udp/client
+networks/partA/basic/udp/server
