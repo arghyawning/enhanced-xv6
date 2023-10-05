@@ -249,7 +249,26 @@ prompt> ./test-getreadcounts.sh -s
 
 ---
 
-## Getting runtimes and waittimes for your schedulers
+## Schedulers
+
+in `Makefile`, the following lines were added
+
+```make
+ifndef SCHEDULER
+SCHEDULER := RR         # setting the default scheduler to RR
+endif
+CFLAGS+="-D$(SCHEDULER)"
+```
+
+The default is Round Robin (RR). For that, just `make qemu` will suffice. It is different in case of other scheduling algorithms.
+For example, if I want to use FCFS scheduling, I would do the following:
+
+```sh
+make qemu SCHEDULER=FCFS
+```
+
+
+### Getting runtimes and waittimes for your schedulers
 
 Run the following command in xv6:
 
@@ -258,16 +277,6 @@ prompt> schedulertest
 ```
 
 ### Implementing FCFS
-
-- in `Makefile`
-  added the following lines
-
-  ```make
-  ifndef SCHEDULER
-  SCHEDULER := RR         # setting the default scheduler to RR
-  endif
-  CFLAGS+="-D$(SCHEDULER)"
-  ```
 
 - in `kernel/proc.c`
 
