@@ -34,217 +34,334 @@ prompt> ./test-getreadcounts.sh -s
 ### Implementing `getreadcount`
 
 - in `kernel/syscall.h`
-    add the following entry
-    ```
-    #define SYS_getreadcount 22
-    ```
+  add the following entry
+
+  ```h
+  #define SYS_getreadcount 22
+  ```
 
 - in `kernel/syscall.c`
-    - add the following line to the `syscall` array
-        ```
-        [SYS_getreadcount] sys_getreadcount,
-        ```
-    - add the following line
-        ```
-        extern int sys_getreadcount(void);
-        ```
+
+  - add the following line to the `syscall` array
+    ```c
+    [SYS_getreadcount] sys_getreadcount,
+    ```
+  - add the following line
+    ```c
+    extern int sys_getreadcount(void);
+    ```
 
 - in `kernel/proc.h`
-    add a new attribute `readcount` to the `proc` structure
-    ```
-    int readcount;        // number of times sys call read has been called
-    ```
+  add a new attribute `readcount` to the `proc` structure
+
+  ```h
+  int readcount;        // number of times sys call read has been called
+  ```
 
 - in `kernel/sysproc.c`
-    add the following function
-    ```
-    int
-    sys_getreadcount(void)
-    {
-        return myproc()->readcount;
-    }
-    ```
+  add the following function
+
+  ```c
+  int
+  sys_getreadcount(void)
+  {
+      return myproc()->readcount;
+  }
+  ```
 
 - in `kernel/proc.c`
-    initialise the `readcount` attribute of the `proc` structure to 0 in the `allocproc` and `freeproc` functions
-    ```
-    p->readcount = 0;
-    ```
+  initialise the `readcount` attribute of the `proc` structure to 0 in the `allocproc` and `freeproc` functions
+
+  ```c
+  p->readcount = 0;
+  ```
 
 - in `kernel/syscall.c`
-    - declare and initialise a variable `readcount`
-        ```
-        int readcount = 0;
-        ```
-    - if the sys call `read` is called, update the readcount variable and if the sys call `getreadcount` is called, update the readcount attribute of the process
-        ```
-        if(num==SYS_read)
-            readcount++;
-        if(num==SYS_getreadcount)
-            p->readcount = readcount;
-        ```
+
+  - declare and initialise a variable `readcount`
+    ```c
+    int readcount = 0;
+    ```
+  - if the sys call `read` is called, update the readcount variable and if the sys call `getreadcount` is called, update the readcount attribute of the process
+    ```c
+    if(num==SYS_read)
+        readcount++;
+    if(num==SYS_getreadcount)
+        p->readcount = readcount;
+    ```
 
 - in `user/user.h`
-    add the following function definition
-    ```
-    int getreadcount(void);
-    ```
+  add the following function definition
+
+  ```h
+  int getreadcount(void);
+  ```
 
 - in `user/usys.pl`
-    added the following entry
-    ```
-    entry("getreadcount");
-    ```
-
+  added the following entry
+  ```pl
+  entry("getreadcount");
+  ```
 
 ---
 
 ## Running Tests for sigalarm and sigreturn
 
 **After implementing both sigalarm and sigreturn**, do the following:
+
 - Make the entry for `alarmtest` in `src/Makefile` inside `UPROGS`
 - Run the command inside xv6:
-    ```sh
-    prompt> alarmtest
-    ```
+  ```sh
+  prompt> alarmtest
+  ```
 
 ### Implementing `sigalarm` and `sigreturn`
 
 - in `kernel/syscall.h`
-    add the following entry
-    ```
-    #define SYS_sigalarm 24
-    #define SYS_sigreturn 25
-    ```
+  add the following entry
+
+  ```h
+  #define SYS_sigalarm 24
+  #define SYS_sigreturn 25
+  ```
 
 - in `kernel/syscall.c`
-    - add the following line
-        ```
-        extern uint64 sys_sigalarm(void);
-        extern uint64 sys_sigreturn(void);
-        ```
-    - add the following line to the `syscall` array
-        ```
-        [SYS_sigalarm] sys_sigalarm,
-        [SYS_sigreturn] sys_sigreturn,
-        ```
+
+  - add the following line
+    ```c
+    extern uint64 sys_sigalarm(void);
+    extern uint64 sys_sigreturn(void);
+    ```
+  - add the following line to the `syscall` array
+    ```c
+    [SYS_sigalarm] sys_sigalarm,
+    [SYS_sigreturn] sys_sigreturn,
+    ```
 
 - in `user/user.h`
-    add the following function definition
-    ```
-    int sigalarm(int, void* func);
-    int sigreturn(void);
-    ```
+  add the following function definition
+
+  ```h
+  int sigalarm(int, void* func);
+  int sigreturn(void);
+  ```
 
 - in `user/usys.pl`
-    added the following entry
-    ```
-    entry("sigalarm");
-    entry("sigreturn");
-    ```
+  added the following entry
+
+  ```pl
+  entry("sigalarm");
+  entry("sigreturn");
+  ```
 
 - in `kernel/proc.h`
-    add the following required new attributes to the `proc` structure
-    ```
-    int numticks;                    // number of ticks the process has run for
-    int alarmflag;                   // flag to check if alarm is set
-    int interval;                    // number of ticks after which alarm handler is to be called
-    uint64 handler;                  // function pointer for alarm handler
-    struct trapframe *trapframecopy; // copy of trapframe for sigreturn
-    ```
+  add the following required new attributes to the `proc` structure
+
+  ```h
+  int numticks;                    // number of ticks the process has run for
+  int alarmflag;                   // flag to check if alarm is set
+  int interval;                    // number of ticks after which alarm handler is to be called
+  uint64 handler;                  // function pointer for alarm handler
+  struct trapframe *trapframecopy; // copy of trapframe for sigreturn
+  ```
 
 - in `kernel/proc.c`
-    - update the `allocproc` function to initialise the new attributes
-        ```
-        p->numticks = 0;
-        p->alarmflag = 0;
-        p->interval = 0;
-        p->handler = 0;
-        ```
-    - updated the `freeproc` function as well
+
+  - update the `allocproc` function to initialise the new attributes
+    ```c
+    p->numticks = 0;
+    p->alarmflag = 0;
+    p->interval = 0;
+    p->handler = 0;
+    ```
+  - updated the `freeproc` function as well
 
 - in `kernel/sysproc.c`
-    add the `sys_sigalarm` and `sys_sigreturn` functions
-    ```
-    int
-    sys_sigalarm(void)
-    {
-        int interval;
-        argint(0, &interval);
+  add the `sys_sigalarm` and `sys_sigreturn` functions
 
-        uint64 handler;
-        argaddr(1, &handler);
+  ```c
+  int
+  sys_sigalarm(void)
+  {
+      int interval;
+      argint(0, &interval);
 
-        struct proc *p = myproc();
-        p->numticks = 0;
-        p->interval = interval;
-        p->handler = handler;
+      uint64 handler;
+      argaddr(1, &handler);
 
-        return 0;
-    }
+      struct proc *p = myproc();
+      p->numticks = 0;
+      p->interval = interval;
+      p->handler = handler;
 
-    int
-    sys_sigreturn(void)
-    {
-        struct proc *p = myproc();
-        
-        memmove(p->trapframe, p->trapframecopy, sizeof(struct trapframe));
-        p->alarmflag = 0;
-        
-        return 0;
-    }
-    ```
+      return 0;
+  }
+
+  int
+  sys_sigreturn(void)
+  {
+      struct proc *p = myproc();
+
+      memmove(p->trapframe, p->trapframecopy, sizeof(struct trapframe));
+      p->alarmflag = 0;
+
+      return 0;
+  }
+  ```
 
 - in `kernel/syscall.c`
-    the return value of `sigreturn` gets stored in `trapframe->a0` and so here, its value is being restored
-    ```
-    if(num==SYS_sigreturn)
-    {
-        // restore a0
-        p->trapframe->a0 = p->trapframecopy->a0;
-        kfree((void*) p->trapframecopy);
-    }
-    ```
+  the return value of `sigreturn` gets stored in `trapframe->a0` and so here, its value is being restored
+
+  ```c
+  if(num==SYS_sigreturn)
+  {
+      // restore a0
+      p->trapframe->a0 = p->trapframecopy->a0;
+      kfree((void*) p->trapframecopy);
+  }
+  ```
 
 - in `kernel/trap.c`
-    added code to update the number of ticks and handle accordingly
-    ```
-    // give up the CPU if this is a timer interrupt.
-    if (which_dev == 2)
-    {
-        if (p->interval > 0)
-        {
-            if(p->alarmflag==0)
-            {
-                p->numticks++;
-                if (p->numticks == p->interval)
-                {
-                    p->numticks = 0;
-                    p->alarmflag = 1;
-                    p->trapframecopy = (struct trapframe *)kalloc();
-                    *(p->trapframecopy) = *(p->trapframe);
-                    p->trapframe->epc = p->handler;
-                }
-            }
-        }
-        yield();
-    }
-    ```
-    note: `which_dev` being 2 indicates timer interrupt
+  added code to update the number of ticks and handle accordingly
+  ```c
+  // give up the CPU if this is a timer interrupt.
+  if (which_dev == 2)
+  {
+      if (p->interval > 0)
+      {
+          if(p->alarmflag==0)
+          {
+              p->numticks++;
+              if (p->numticks == p->interval)
+              {
+                  p->numticks = 0;
+                  p->alarmflag = 1;
+                  p->trapframecopy = (struct trapframe *)kalloc();
+                  *(p->trapframecopy) = *(p->trapframe);
+                  p->trapframe->epc = p->handler;
+              }
+          }
+      }
+      yield();
+  }
+  ```
+  note: `which_dev` being 2 indicates timer interrupt
 
 ---
 
 ## Getting runtimes and waittimes for your schedulers
-- Run the following command in xv6:
-    ```sh
-    prompt> schedulertest
-    ```  
+
+Run the following command in xv6:
+
+```sh
+prompt> schedulertest
+```
+
+### Implementing FCFS
+
+- in `Makefile`
+  added the following lines
+
+  ```make
+  ifndef SCHEDULER
+  SCHEDULER := RR         # setting the default scheduler to RR
+  endif
+  CFLAGS+="-D$(SCHEDULER)"
+  ```
+
+- in `kernel/proc.c`
+
+  - added the following line to the `allocproc` function for updating creation time of process
+    ```c
+    p->ctime = ticks;
+    ```
+  - added the following line to the `freeproc` function
+    ```c
+    p->ctime = 0;
+    ```
+  - put the existing scheduling code inside an `#ifdef` block for round-robin scheduling
+    ```c
+    #ifdef RR
+    // existing RR scheduling code
+    #endif
+    ```
+  - added the following code for FCFS scheduling
+
+    ```c
+    #ifdef FCFS
+    for(;;)
+    {
+        // Avoid deadlock by ensuring that devices can interrupt.
+        intr_on();
+
+        struct proc *firstproc = 0;
+
+        for (p = proc; p < &proc[NPROC]; p++)
+        {
+            acquire(&p->lock);
+            if (p->state == RUNNABLE)
+            {
+                if(firstproc == 0)
+                {
+                    firstproc = p;
+                    continue;
+                }
+                if(p->ctime < firstproc->ctime)
+                {
+                    release(&firstproc->lock); // release the lock of the previous process as different process is already assumed to be first
+                    firstproc = p;
+                    continue;
+                }
+            }
+            release(&p->lock);
+        }
+
+        p = firstproc;
+        if(p > 0)
+        {
+            // Switch to chosen process.  It is the process's job
+            // to release its lock and then reacquire it
+            // before jumping back to us.
+            p->state = RUNNING;
+            c->proc = p;
+            swtch(&c->context, &p->context);
+
+            // Process is done running for now.
+            // It should have changed its p->state before coming back.
+            c->proc = 0;
+            release(&p->lock);
+        }
+    }
+    #endif
+    ```
+
+- in `kernel/trap.c`
+    for FCFS scheduling, after the completion of process, we exit directly without yielding, unless it is the case of a timer interrupt
+    ```c
+    #ifndef FCFS
+
+    if(which_dev == 2)
+        yield();
+
+    #endif
+    ```
+    note: `which_dev` being 2 indicates timer interrupt
+    ```c
+    #ifndef FCFS
+    if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+        yield();
+    #endif
+    ```
+
+### Implementing MLFQ
+
 ---
 
 ## Running tests for entire xv6 OS
+
 - Run the following command in xv6:
-    ```sh
-    prompt> usertests
-    ```
+  ```sh
+  prompt> usertests
+  ```
 
 ---

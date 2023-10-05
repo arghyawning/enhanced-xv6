@@ -127,6 +127,7 @@ found:
   p->pid = allocpid();
   p->state = USED;
   p->readcount = 0;
+  p->ctime = ticks;
 
   // Allocate a trapframe page.
   if ((p->trapframe = (struct trapframe *)kalloc()) == 0)
@@ -152,7 +153,7 @@ found:
   p->context.sp = p->kstack + PGSIZE;
   p->rtime = 0;
   p->etime = 0;
-  p->ctime = ticks;
+  // p->ctime = ticks;
 
   p->numticks = 0;
   p->alarmflag = 0;
@@ -181,6 +182,8 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  p->ctime = 0;
 
   p->readcount = 0;
 
@@ -476,6 +479,8 @@ void scheduler(void)
   struct cpu *c = mycpu();
 
   c->proc = 0;
+
+#ifdef RR
   for (;;)
   {
     // Avoid deadlock by ensuring that devices can interrupt.
@@ -500,6 +505,54 @@ void scheduler(void)
       release(&p->lock);
     }
   }
+#endif
+
+#ifdef FCFS
+  for(;;)
+  {
+    // Avoid deadlock by ensuring that devices can interrupt.
+    intr_on();
+
+    struct proc *firstproc = 0;
+
+    for (p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE)
+      {
+        if(firstproc == 0)
+        {
+          firstproc = p;
+          continue;
+        }
+        if(p->ctime < firstproc->ctime)
+        {
+          release(&firstproc->lock); // release the lock of the previous process as different process is already assumed to be first
+          firstproc = p;
+          continue;
+        }
+      }
+      release(&p->lock);
+    }
+
+    p = firstproc;
+    if(p > 0)
+    {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        release(&p->lock);
+    }
+  }
+#endif
+
 }
 
 // Switch to scheduler.  Must hold only p->lock

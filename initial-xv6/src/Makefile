@@ -73,6 +73,11 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
+ifndef SCHEDULER
+SCHEDULER := RR			# setting the default scheduler to RR
+endif
+CFLAGS+="-D$(SCHEDULER)"
+
 $K/kernel: $(OBJS) $K/kernel.ld $U/initcode
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
 	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
