@@ -27,7 +27,7 @@ int main()
     // server address configuration
     memset(&addr, '\0', sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_port = port;
+    addr.sin_port = htons(port);
     addr.sin_addr.s_addr = inet_addr(ip);
 
     // initiating connection to server
