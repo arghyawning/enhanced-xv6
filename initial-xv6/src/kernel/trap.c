@@ -6,6 +6,11 @@
 #include "proc.h"
 #include "defs.h"
 
+#ifdef MLFQ
+#include "./mlfq.h"
+int timeslices[NMLFQ] = {1, 3, 9, 15};
+#endif
+
 struct spinlock tickslock;
 uint ticks;
 
@@ -75,14 +80,14 @@ void usertrap(void)
     setkilled(p);
   }
 
-  if(killed(p))
+  if (killed(p))
     exit(-1);
-  
-  if(which_dev==2)
+
+  if (which_dev == 2)
   {
     if (p->interval > 0)
     {
-      if(p->alarmflag==0)
+      if (p->alarmflag == 0)
       {
         p->numticks++;
         if (p->numticks == p->interval)
@@ -97,12 +102,41 @@ void usertrap(void)
     }
   }
 
-  #ifndef FCFS
+#ifdef RR
 
-  if(which_dev == 2)
+  if (which_dev == 2)
     yield();
 
-  #endif
+#endif
+
+#ifdef MLFQ
+
+  if (which_dev == 2)
+  {
+    struct proc *p = myproc();
+    if (p && p->state == RUNNING)
+    {
+      p->runtime++;
+      for (int i = 0; i < p->qno; i++)
+      {
+        if (mlfq.npq[i] > 0)
+        {
+          push(p->qno, p);
+          yield();
+        }
+      }
+      if (p->runtime >= timeslices[p->qno])
+      {
+        if (p->qno < NMLFQ - 1)
+          push(p->qno + 1, p);
+        else
+          push(p->qno, p);
+        yield();
+      }
+    }
+  }
+
+#endif
 
   usertrapret();
 }
@@ -174,9 +208,43 @@ void kerneltrap()
   }
 
   // give up the CPU if this is a timer interrupt.
-#ifndef FCFS
+// #ifndef FCFS
+#ifdef RR
   if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
     yield();
+#endif
+
+#ifdef MLFQ
+  struct proc *p = myproc();
+  if (p)
+  {
+    if (p->state == RUNNING)
+      p->runtime++;
+
+    for (int i = 0; i < p->qno; i++)
+    {
+      if (mlfq.npq[i] > 0)
+      {
+        push(p->qno, p);
+        yield();
+      }
+    }
+
+    if (which_dev == 2)
+    {
+      if (myproc() && myproc()->state == RUNNING)
+      {
+        if (p->runtime >= timeslices[p->qno])
+        {
+          if (p->qno < NMLFQ - 1)
+            push(p->qno + 1, p);
+          else
+            push(p->qno, p);
+          yield();
+        }
+      }
+    }
+  }
 #endif
 
   // the yield() may have caused some traps to occur,

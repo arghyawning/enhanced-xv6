@@ -6,6 +6,11 @@
 #include "proc.h"
 #include "defs.h"
 
+#ifdef MLFQ
+#include "./mlfq.h"
+// int timeslices[NMLFQ] = {1, 3, 9, 15};
+#endif
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -124,6 +129,14 @@ allocproc(void)
   return 0;
 
 found:
+
+#ifdef MLFQ
+  p->qwaittime = 0;
+  p->qpresent = 0;
+  p->qno = 0;
+  p->runtime = 0;
+#endif
+
   p->pid = allocpid();
   p->state = USED;
   p->readcount = 0;
@@ -168,6 +181,13 @@ found:
 static void
 freeproc(struct proc *p)
 {
+#ifdef MLFQ
+  p->qwaittime = 1;
+  p->qpresent = 0;
+  p->qno = 0;
+  p->runtime = 0;
+#endif
+
   if (p->trapframe)
     kfree((void *)p->trapframe);
   p->trapframe = 0;
@@ -508,7 +528,7 @@ void scheduler(void)
 #endif
 
 #ifdef FCFS
-  for(;;)
+  for (;;)
   {
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
@@ -520,12 +540,12 @@ void scheduler(void)
       acquire(&p->lock);
       if (p->state == RUNNABLE)
       {
-        if(firstproc == 0)
+        if (firstproc == 0)
         {
           firstproc = p;
           continue;
         }
-        if(p->ctime < firstproc->ctime)
+        if (p->ctime < firstproc->ctime)
         {
           release(&firstproc->lock); // release the lock of the previous process as different process is already assumed to be first
           firstproc = p;
@@ -536,23 +556,81 @@ void scheduler(void)
     }
 
     p = firstproc;
-    if(p > 0)
+    if (p > 0)
     {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+      // Switch to chosen process.  It is the process's job
+      // to release its lock and then reacquire it
+      // before jumping back to us.
+      p->state = RUNNING;
+      c->proc = p;
+      swtch(&c->context, &p->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->proc = 0;
-        release(&p->lock);
+      // Process is done running for now.
+      // It should have changed its p->state before coming back.
+      c->proc = 0;
+      release(&p->lock);
     }
   }
 #endif
 
+#ifdef MLFQ
+  for (;;)
+  {
+    intr_on();
+
+    // aging
+    for (p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if (p->qpresent)
+      {
+        if (p->qwaittime >= AGEWHEN && p->qno > 0)
+        {
+          remove(p->qno, p);
+          p->qwaittime = 0;
+          push(p->qno - 1, p);
+        }
+      }
+      release(&p->lock);
+    }
+
+    // pushing into current priority queue
+    for (p = proc; p < &proc[NPROC]; p++)
+    {
+      acquire(&p->lock);
+      if (p->state == RUNNABLE)
+      {
+        if (p->qpresent == 0)
+        {
+          if (mlfq.npq[0] < NPROC)
+            push(0, p);
+        }
+      }
+      release(&p->lock);
+    }
+
+    int q;
+    for (q = 0; q < NMLFQ; q++)
+    {
+      if (mlfq.npq[q] > 0)
+      {
+        p = pop(q);
+        if (p)
+        {
+          acquire(&p->lock);
+          // process switch
+          p->state = RUNNING;
+          c->proc = p;
+          // n scheduled
+          swtch(&c->context, &p->context);
+          c->proc = 0;
+          release(&p->lock);
+          break;
+        }
+      }
+    }
+  }
+#endif
 }
 
 // Switch to scheduler.  Must hold only p->lock
@@ -754,6 +832,18 @@ void procdump(void)
   struct proc *p;
   char *state;
 
+#ifdef MLFQ
+  printf("\nmlfq going on");
+#endif
+
+#ifdef RR
+  printf("\nrr going on");
+#endif
+
+#ifdef FCFS
+  printf("\nfcfs going on");
+#endif
+
   printf("\n");
   for (p = proc; p < &proc[NPROC]; p++)
   {
@@ -765,7 +855,19 @@ void procdump(void)
       state = "???";
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
+
+#ifdef MLFQ
+    printf(" in queue?%s queue num%d", p->qpresent == 1 ? "yes" : "no", p->qno);
+    printf(" run time %d, wait time %d", p->runtime, p->qwaittime);
+#endif
+    printf("\n");
   }
+#ifdef MLFQ
+  printf("queue sizes : ");
+  for (int i = 0; i < NMLFQ; i++)
+    printf("%d ", mlfq.npq[i]);
+  printf("\n");
+#endif
 }
 
 // waitx
