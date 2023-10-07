@@ -584,6 +584,7 @@ void scheduler(void)
       acquire(&p->lock);
       if (p->qpresent)
       {
+        p->qwaittime++;
         if (p->qwaittime >= AGEWHEN && p->qno > 0)
         {
           remove(p->qno, p);
