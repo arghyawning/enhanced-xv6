@@ -38,10 +38,6 @@ gcc -o client client.c
 
 ### Rock-Paper-Scissors
 
-#### TCP
-
-Directory: `./partA/rps/tcp`
-
 Run the server code:
 ```bash
 gcc -o server server.c
@@ -57,7 +53,13 @@ gcc -o p1 player1.c
 ```bash
 gcc -o p2 player2.c
 ./p2
+
 ```
+
+The running instructions mentioned above are same for both TCP and UDP implementations and should be run in their respective directories.
+#### TCP
+
+Directory: `./partA/rps/tcp`
 
 #### UDP
 
