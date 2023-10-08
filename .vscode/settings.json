@@ -2,6 +2,8 @@
     "files.associations": {
         "user.h": "c",
         "syscall.h": "c",
-        "inet.h": "c"
+        "inet.h": "c",
+        "mlfq.h": "c",
+        "unistd.h": "c"
     }
 }
