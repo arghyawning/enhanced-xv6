@@ -3,6 +3,7 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
+#include "./mlfq.h"
 
 volatile static int started = 0;
 
@@ -40,6 +41,8 @@ main()
     trapinithart();   // install kernel trap vector
     plicinithart();   // ask PLIC for device interrupts
   }
+
+  initmlfq();
 
   scheduler();        
 }
