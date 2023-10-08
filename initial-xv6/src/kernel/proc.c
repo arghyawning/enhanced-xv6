@@ -182,7 +182,7 @@ static void
 freeproc(struct proc *p)
 {
 #ifdef MLFQ
-  p->qwaittime = 1;
+  p->qwaittime = 0;
   p->qpresent = 0;
   p->qno = 0;
   p->runtime = 0;

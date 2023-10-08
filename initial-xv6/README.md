@@ -267,7 +267,6 @@ For example, if I want to use FCFS scheduling, I would do the following:
 make qemu SCHEDULER=FCFS
 ```
 
-
 ### Getting runtimes and waittimes for your schedulers
 
 Run the following command in xv6:
@@ -345,24 +344,223 @@ prompt> schedulertest
     ```
 
 - in `kernel/trap.c`
-    for FCFS scheduling, after the completion of process, we exit directly without yielding, unless it is the case of a timer interrupt
-    ```c
-    #ifndef FCFS
+  for FCFS scheduling, after the completion of process, we exit directly without yielding, unless it is the case of a timer interrupt
 
-    if(which_dev == 2)
-        yield();
+  ```c
+  #ifndef FCFS
 
-    #endif
-    ```
-    note: `which_dev` being 2 indicates timer interrupt
-    ```c
-    #ifndef FCFS
-    if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
-        yield();
-    #endif
-    ```
+  if(which_dev == 2)
+      yield();
+
+  #endif
+  ```
+
+  note: `which_dev` being 2 indicates timer interrupt
+
+  ```c
+  #ifndef FCFS
+  if (which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
+      yield();
+  #endif
+  ```
 
 ### Implementing MLFQ
+
+- in `Makefile`, added to `OBJS`
+
+  ```make
+  $K/mlfq.o
+  ```
+
+- added `mlfq.h` to `kernel/`
+  header file for MLFQ scheduling
+
+  - declared the mlfq structure
+  - declared the mlfq functions
+  - defined the required mlfq variables, etc
+
+- added `mlfq.c` to `kernel/`
+  defined the mlfq functions
+
+  - `initmlfq` - initialises the mlfq structure
+  - `push` - pushes the process into the mlfq
+  - `pop` - pops the process from the mlfq
+  - `remove` - removes the process from the mlfq
+
+- in `kernel/main.c`
+
+  - included the `mlfq.h` header file
+  - added the following line to the `main` function to initialise the mlfq structure
+    ```c
+    #ifdef MLFQ
+      initmlfq();
+    #endif
+    ```
+
+- in `kernel/proc.h`
+  added the following attributes to the `proc` structure
+
+  ```c
+  #ifdef MLFQ
+    int qwaittime; // time spent in the queue
+    int qpresent;  // flag to check if process is present in the queue
+    int qno;       // queue number
+    int runtime;   // time spent running
+  #endif
+  ```
+
+- in `kernal/proc.c`
+
+  - included the `mlfq.h` header file
+  - in the `allocproc` and `freeproc` functions, initialised the attributes
+    ```c
+    #ifdef MLFQ
+      p->qwaittime = 0;
+      p->qpresent = 0;
+      p->qno = 0;
+      p->runtime = 0;
+    #endif
+    ```
+  - in the `scheduler` function, added the following code for aging, pushing into the queues properly, and scheduling
+
+    ```c
+    #ifdef MLFQ
+      for (;;)
+      {
+        intr_on();
+
+        // aging
+        for (p = proc; p < &proc[NPROC]; p++)
+        {
+          acquire(&p->lock);
+          if (p->qpresent)
+          {
+            p->qwaittime++;
+            if (p->qwaittime >= AGEWHEN && p->qno > 0)
+            {
+              remove(p->qno, p);
+              p->qwaittime = 0;
+              push(p->qno - 1, p);
+            }
+          }
+          release(&p->lock);
+        }
+
+        // pushing into current priority queue
+        for (p = proc; p < &proc[NPROC]; p++)
+        {
+          acquire(&p->lock);
+          if (p->state == RUNNABLE)
+          {
+            if (p->qpresent == 0)
+            {
+              if (mlfq.npq[0] < NPROC)
+                push(0, p);
+            }
+          }
+          release(&p->lock);
+        }
+
+        int q;
+        for (q = 0; q < NMLFQ; q++)
+        {
+          if (mlfq.npq[q] > 0)
+          {
+            p = pop(q);
+            if (p)
+            {
+              acquire(&p->lock);
+              // process switch
+              p->state = RUNNING;
+              c->proc = p;
+              // n scheduled
+              swtch(&c->context, &p->context);
+              c->proc = 0;
+              release(&p->lock);
+              break;
+            }
+          }
+        }
+      }
+    #endif
+    ```
+
+- in `kernel/trap.c`
+
+  - defined the timeslices for each queue
+    ```c
+    #ifdef MLFQ
+      int timeslice[NMLFQ] = {1, 2, 4, 8, 16};
+    #endif
+    ```
+  - updated `usertrap()` function to update the runtime of the process and shift between queues accordingly
+
+    ```c
+    #ifdef MLFQ
+      if (which_dev == 2)
+      {
+        struct proc *p = myproc();
+        if (p && p->state == RUNNING)
+        {
+          p->runtime++;
+          for (int i = 0; i < p->qno; i++)
+          {
+            if (mlfq.npq[i] > 0)
+            {
+              push(p->qno, p);
+              yield();
+            }
+          }
+          if (p->runtime >= timeslices[p->qno])
+          {
+            if (p->qno < NMLFQ - 1)
+              push(p->qno + 1, p);
+            else
+              push(p->qno, p);
+            yield();
+          }
+        }
+      }
+
+    #endif
+    ```
+
+  - updated `kerneltrap()` as well
+
+    ```c
+    #ifdef MLFQ
+      struct proc *p = myproc();
+      if (p)
+      {
+        if (p->state == RUNNING)
+          p->runtime++;
+
+        for (int i = 0; i < p->qno; i++)
+        {
+          if (mlfq.npq[i] > 0)
+          {
+            push(p->qno, p);
+            yield();
+          }
+        }
+
+        if (which_dev == 2)
+        {
+          if (myproc() && myproc()->state == RUNNING)
+          {
+            if (p->runtime >= timeslices[p->qno])
+            {
+              if (p->qno < NMLFQ - 1)
+                push(p->qno + 1, p);
+              else
+                push(p->qno, p);
+              yield();
+            }
+          }
+        }
+      }
+    #endif
+    ```
 
 ---
 

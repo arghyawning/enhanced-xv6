@@ -3,7 +3,10 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
+
+#ifdef MLFQ
 #include "./mlfq.h"
+#endif
 
 volatile static int started = 0;
 
@@ -42,7 +45,9 @@ main()
     plicinithart();   // ask PLIC for device interrupts
   }
 
+#ifdef MLFQ
   initmlfq();
+#endif
 
   scheduler();        
 }
