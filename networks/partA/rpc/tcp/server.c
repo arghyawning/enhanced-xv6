@@ -62,7 +62,7 @@ int main()
     int i;
 
     // Accept two clients
-    for (i = 0; i < 2; ++i)
+    for (i = 0; i < 2; i++)
     {
         addr_size = sizeof(server_addr);
         int *client_sock = malloc(sizeof(int));
@@ -82,30 +82,25 @@ int main()
         printf("[+]Player %c connected.\n", clients[i].name);
     }
 
+    int flag;
     while (1)
     {
+        flag = 0;
         // Receive input from both clients
-        for (i = 0; i < 2; ++i)
+        for (i = 0; i < 2; i++)
         {
             char buffer[1024];
             bzero(buffer, 1024);
 
             ssize_t bytes_received = recv(clients[i].client_sock, buffer, sizeof(buffer), 0);
             if (bytes_received <= 0)
+                perror("[-]Error receiving");
+
+            // Exit the loop if the user types any other key
+            if (strcmp(buffer, "R\n") != 0 && strcmp(buffer, "P\n") != 0 && strcmp(buffer, "S\n") != 0)
             {
-                // Client disconnected
-                close(clients[i].client_sock);
-                printf("[+]Player %c disconnected.\n", clients[i].name);
-
-                // Close the remaining client's socket
-                int remaining_index = (i + 1) % 2;
-                close(clients[remaining_index].client_sock);
-                printf("[+]Player %c disconnected.\n", clients[remaining_index].name);
-
-                // Close the server socket and exit
-                close(server_sock);
-                printf("[+]Server closed.\n");
-                exit(0);
+                flag = 1;
+                break;
             }
 
             clients[i].last_input = buffer[0];
@@ -115,6 +110,13 @@ int main()
         // Determine the winner based on the game logic
         char result[1024];
         bzero(result, 1024);
+
+        if (flag)
+        {
+            snprintf(result, sizeof(result), "X");
+            send(clients[(i + 1) % 2].client_sock, result, strlen(result), 0);
+            break;
+        }
 
         char a = clients[0].last_input;
         char b = clients[1].last_input;
@@ -129,7 +131,7 @@ int main()
         printf("Result: %s", result);
 
         // Send the result to both clients
-        for (i = 0; i < 2; ++i)
+        for (i = 0; i < 2; i++)
         {
             if (send(clients[i].client_sock, result, strlen(result), 0) < 0)
             {
@@ -138,7 +140,34 @@ int main()
                 exit(1);
             }
         }
+
+        for (i = 0; i < 2; i++)
+        {
+            char buffer[1024];
+            bzero(buffer, 1024);
+
+            ssize_t bytes_received = recv(clients[i].client_sock, buffer, sizeof(buffer), 0);
+            if (bytes_received <= 0)
+                perror("[-]Error receiving");
+
+            if (strcmp(buffer, "y\n") != 0)
+            {
+                flag = 1;
+                break;
+            }
+        }
+        bzero(result, 1024);
+        if (flag)
+            snprintf(result, sizeof(result), "X");
+        else
+            snprintf(result, sizeof(result), "Continue");
+        for (i = 0; i < 2; i++)
+            send(clients[i].client_sock, result, strlen(result), 0);
+        if (flag)
+            break;
+        printf("\nNext round!\n");
     }
+    printf("\nGame over\n");
 
     return 0;
 }

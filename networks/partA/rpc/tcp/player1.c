@@ -42,13 +42,11 @@ int main()
     while (1)
     {
         // sending data
-        // printf("Enter message (type 'exit' to exit): ");
-        printf("Enter R for rock, P for paper, S for scissors(, q to exit): ");
+        printf("Enter R for rock, P for paper, S for scissors(, any other key to exit): ");
         bzero(buffer, 1024);
         fgets(buffer, 1024, stdin);
 
-        // Exit the loop if the user types 'exit'
-        if (strcmp(buffer, "q\n") == 0)
+        if (strcmp(buffer, "R\n") != 0 && strcmp(buffer, "P\n") != 0 && strcmp(buffer, "S\n") != 0)
             break;
 
         printf("Played: %s\n", buffer);
@@ -67,7 +65,43 @@ int main()
             close(sock);
             exit(1);
         }
+        if (strcmp(buffer, "X") == 0)
+        {
+            printf("Game over\n");
+            break;
+        }
         printf("Server: %s\n", buffer);
+
+        printf("\nReady for the next round?\n");
+        printf("Enter y to start, any other key to exit: ");
+        bzero(buffer, 1024);
+        fgets(buffer, 1024, stdin);
+
+        if (send(sock, buffer, strlen(buffer), 0) < 0)
+        {
+            perror("[-]Error sending");
+            close(sock);
+            exit(1);
+        }
+
+        if (strcmp(buffer, "y\n") != 0)
+        {
+            printf("Exit.\n");
+            break;
+        }
+        // receiving
+        bzero(buffer, 1024);
+        if (recv(sock, buffer, sizeof(buffer), 0) < 0)
+        {
+            perror("[-]Error receiving");
+            close(sock);
+            exit(1);
+        }
+        if (strcmp(buffer, "X") == 0)
+        {
+            printf("Game over\n");
+            break;
+        }
     }
 
     close(sock);
