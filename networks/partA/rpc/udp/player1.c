@@ -81,6 +81,37 @@ int main()
             break;
         }
         printf("Server: %s\n", buffer);
+
+        printf("\nReady for the next round?\n");
+        printf("Enter y to start, any other key to exit: ");
+        bzero(buffer, 1024);
+        fgets(buffer, 1024, stdin);
+        if (sendto(sock, buffer, strlen(buffer), 0, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        {
+            perror("[-]Error sending");
+            close(sock);
+            exit(1);
+        }
+        // printf("Sent:%s\n", buffer);
+        if (strcmp(buffer, "y\n") != 0)
+        {
+            printf("Exit.\n");
+            close(sock);
+            exit(1);
+        }
+        // receiving data
+        bzero(buffer, 1024);
+        if (recvfrom(sock, buffer, sizeof(buffer), 0, NULL, NULL) < 0)
+        {
+            perror("[-]Error receiving");
+            close(sock);
+            exit(1);
+        }
+        if (strcmp(buffer, "X") == 0)
+        {
+            printf("Game over!\n");
+            break;
+        }
     }
 
     close(sock);
