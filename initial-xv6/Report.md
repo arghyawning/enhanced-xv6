@@ -436,7 +436,7 @@ CFLAGS+="-D$(SCHEDULER)"
   - defined the timeslices for each queue
     ```c
     #ifdef MLFQ
-      int timeslice[NMLFQ] = {1, 2, 4, 8, 16};
+      int timeslice[NMLFQ] = {1, 3, 9, 15};
     #endif
     ```
   - updated `usertrap()` function to update the runtime of the process and shift between queues accordingly
@@ -523,3 +523,6 @@ Note: For this comparison, the processes are set to run only on 1 CPU
 | Multi-Level Feedback Queue |       15        |       158        |
 
 #### MLFQ Scheduling Analysis
+
+Queue Level vs Number of Ticks (for 1 CPU and age limit = 30) 
+![graph](mlfqgraph.png)

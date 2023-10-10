@@ -135,6 +135,7 @@ found:
   p->qpresent = 0;
   p->qno = 0;
   p->runtime = 0;
+  // p->qruntime = ticks;
 #endif
 
   p->pid = allocpid();
@@ -584,13 +585,13 @@ void scheduler(void)
       acquire(&p->lock);
       if (p->qpresent)
       {
-        p->qwaittime++;
         if (p->qwaittime >= AGEWHEN && p->qno > 0)
         {
           remove(p->qno, p);
           p->qwaittime = 0;
           push(p->qno - 1, p);
         }
+        // p->qruntime = ticks;
       }
       release(&p->lock);
     }
@@ -604,7 +605,13 @@ void scheduler(void)
         if (p->qpresent == 0)
         {
           if (mlfq.npq[0] < NPROC)
+          {
             push(0, p);
+            p->qpresent = 1;
+            p->qno = 0;
+            // p->qruntime = ticks;
+            p->qwaittime = 0;
+          }
         }
       }
       release(&p->lock);
@@ -616,12 +623,25 @@ void scheduler(void)
       if (mlfq.npq[q] > 0)
       {
         p = pop(q);
+        p->qruntime = ticks;
         if (p)
         {
           acquire(&p->lock);
+
+          // // for graph
+          // for (int i = 0; i < NMLFQ; i++)
+          // {
+          //   printf("%d %d ", ticks, i);
+          //   for (int j = 0; j < mlfq.npq[i]; j++)
+          //     printf("%d ", mlfq.pqs[i][j]->pid);
+          //   printf("\n");
+          // }
+          // printf("\n");
+
           // process switch
           p->state = RUNNING;
           c->proc = p;
+          p->qruntime = ticks;
           // n scheduled
           swtch(&c->context, &p->context);
           c->proc = 0;
@@ -936,6 +956,9 @@ void update_time()
     {
       p->rtime++;
     }
+    p->qwaittime++;
+    // if (p->pid == 13)
+    //   printf("process %d: %d\n", p->pid, p->qwaittime);
     release(&p->lock);
   }
 }

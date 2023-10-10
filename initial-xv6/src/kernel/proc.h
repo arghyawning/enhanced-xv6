@@ -132,6 +132,7 @@ struct proc
   int qpresent;  // flag to check if process is present in any queue
   int qno;       // queue number in which process is present
   int runtime;   // time for which process has run
+  // int qruntime;  // time for which process has run in current queue
 #endif
 };
 

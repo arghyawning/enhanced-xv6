@@ -1,5 +1,5 @@
 #define NMLFQ 4
-#define AGEWHEN 20
+#define AGEWHEN 30
 
 struct mlfqueue
 {
