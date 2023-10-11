@@ -13,3 +13,7 @@ networks/partA/rpc/udp/p2
 networks/partA/rpc/udp/server
 
 notes.txt
+mlfqgraph.py
+mlfqdata.txt
+mlfqdata/
+initial-xv6/mlfqgraph.png
