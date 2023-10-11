@@ -588,8 +588,13 @@ void scheduler(void)
         if (p->qwaittime >= AGEWHEN && p->qno > 0)
         {
           remove(p->qno, p);
+          // printf("%d %d %d\n", p->pid, p->qno, p->qwaittime);
+          // final graph
+          printf("%d %d %d\n", p->pid, p->qno, ticks - 1);
           p->qwaittime = 0;
           push(p->qno - 1, p);
+          // final graph
+           printf("%d %d %d\n", p->pid, p->qno, ticks);
         }
         // p->qruntime = ticks;
       }
@@ -608,7 +613,11 @@ void scheduler(void)
           {
             push(0, p);
             p->qpresent = 1;
+            // final graph
+             printf("%d %d %d\n", p->pid, p->qno, ticks - 1);
             p->qno = 0;
+            // //final graph
+            printf("%d %d %d\n", p->pid, p->qno, ticks);
             // p->qruntime = ticks;
             p->qwaittime = 0;
           }
@@ -623,7 +632,7 @@ void scheduler(void)
       if (mlfq.npq[q] > 0)
       {
         p = pop(q);
-        p->qruntime = ticks;
+        // p->qruntime = ticks;
         if (p)
         {
           acquire(&p->lock);
@@ -641,7 +650,7 @@ void scheduler(void)
           // process switch
           p->state = RUNNING;
           c->proc = p;
-          p->qruntime = ticks;
+          // p->qruntime = ticks;
           // n scheduled
           swtch(&c->context, &p->context);
           c->proc = 0;
@@ -956,7 +965,9 @@ void update_time()
     {
       p->rtime++;
     }
+#ifdef MLFQ
     p->qwaittime++;
+#endif
     // if (p->pid == 13)
     //   printf("process %d: %d\n", p->pid, p->qwaittime);
     release(&p->lock);

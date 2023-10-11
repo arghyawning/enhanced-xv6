@@ -4,6 +4,9 @@
         "syscall.h": "c",
         "inet.h": "c",
         "mlfq.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "stdlib.h": "c",
+        "proc.h": "c",
+        "types.h": "c"
     }
 }

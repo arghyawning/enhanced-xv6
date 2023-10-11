@@ -518,11 +518,11 @@ Note: For this comparison, the processes are set to run only on 1 CPU
 
 | Scheduler                  | Average Runtime | Average Waittime |
 | :------------------------- | :-------------: | :--------------: |
-| Round-Robin (default)      |       16        |       165        |
-| First-Come-First-Serve     |       32        |       144        |
-| Multi-Level Feedback Queue |       15        |       158        |
+| Round-Robin (default)      |       16        |       161        |
+| First-Come-First-Serve     |       15        |       161        |
+| Multi-Level Feedback Queue |       31        |       140        |
 
 #### MLFQ Scheduling Analysis
 
-Queue Level vs Number of Ticks (for 1 CPU and age limit = 30) 
-![graph](mlfqgraph.png)
+Queue Level vs Number of Ticks (for 1 CPU and age limit = 30)
+![graph](mlfqfinalgraph.jpeg)

@@ -116,7 +116,25 @@ void usertrap(void)
     struct proc *p = myproc();
     if (p && p->state == RUNNING)
     {
+      // for graph
+      // for (int i = 0; i < NMLFQ; i++)
+      // {
+      //   printf("%d %d ", ticks, i);
+      //   for (int j = 0; j < mlfq.npq[i]; j++)
+      //     printf("%d ", mlfq.pqs[i][j]->pid);
+      //   printf("\n");
+      // }
+      // printf("\n");
       p->runtime++;
+      // for graph
+      // for (int i = 0; i < NMLFQ; i++)
+      // {
+      //   printf("%d %d ", ticks, i);
+      //   for (int j = 0; j < mlfq.npq[i]; j++)
+      //     printf("%d ", mlfq.pqs[i][j]->pid);
+      //   printf("\n");
+      // }
+      // printf("\n");
       for (int i = 0; i < p->qno; i++)
       {
         if (mlfq.npq[i] > 0)
@@ -127,10 +145,15 @@ void usertrap(void)
       }
       if (p->runtime >= timeslices[p->qno])
       {
+        // //final graph
+        printf("%d %d %d\n", p->pid, p->qno, ticks - 1);
         if (p->qno < NMLFQ - 1)
           push(p->qno + 1, p);
         else
           push(p->qno, p);
+        //   //final graph
+        printf("%d %d %d\n", p->pid, p->qno, ticks);
+
         yield();
       }
     }
