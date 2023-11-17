@@ -18,3 +18,6 @@ mlfqdata.txt
 mlfqdata/
 initial-xv6/mlfqgraph.png
 initial-xv6/mlfqgraph.jpeg
+
+initial-xv6/.vscode
+.vscode
